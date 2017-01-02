@@ -72,9 +72,13 @@ class Bot:
     ## Added changes
     def search(self):
         goals = self.game.field.get_goals()
-        bugs = self.game.field.get_bugs()
-        other_position = self.other_player_position()
         player_position = self.player_position()
+        bugs = self.game.field.get_bugs()
+        other_position = self.other_player_position
+        has_weapon=self.game.my_player().has_weapon
+        other_has_weapon = self.game.players[self.game.other_botid].has_weapon
+        other_code = self.game.players[self.game.other_botid].snippets
+        code = self.game.my_player().snippets
 
         if len(goals) != 0:
             min = 1000
@@ -82,19 +86,36 @@ class Bot:
                 [trace, cost] = self.a_star_search(player_position, goal_t)
                 try:
                     attraction = self.game.field.attraction_count(goal_t)
-                    int(math.floor(attraction*2.5))
-                    cost = cost - attraction * 2.5
+                    int(math.floor(attraction*1.5))
+                    cost = cost - attraction * 1.5
                 except:
                     cost = cost
 
-                    if len(bugs) != 0:
-                        for bug in bugs:
-                            if bug in trace:
-                                cost = cost + 3
-                                break
+                path = []
+                traverse_t = goal_t
+                while traverse_t != player_position:
+                    path.append(traverse_t)
+                    traverse_t = trace[traverse_t]
 
-                    if other_position in trace:
-                       cost = cost + 2
+                if len(bugs) != 0:
+                    for bug in bugs:
+                        if bug in path:
+                            if has_weapon:
+                                cost = cost + 3
+                            else:
+                                cost = cost + 8
+                            break
+
+                if other_position in path:
+                    if has_weapon:
+                        if other_code > code and code + 4 > other_code:
+                            cost = cost - 4
+                        else:
+                            cost = cost - 8
+
+                    elif other_has_weapon:
+                        cost = cost + 8
+
 
                 if cost <= min:
                     min = cost
@@ -104,19 +125,14 @@ class Bot:
 
             self.goal = goal
             self.path_stack.items = []
-            self.path = []
 
-            path = []
             traverse = goal
             while traverse != player_position:
                 prev = traverse
                 traverse = self.trace[traverse]
                 move = tuple(map(operator.sub, prev, traverse))
-                path.append(traverse)
                 self.path_stack.push((move, direction[move]))
 
-            path.reverse()
-            self.path = path
 
     def player_position(self):
         pos_x = self.game.my_player().row
@@ -131,12 +147,6 @@ class Bot:
 
     def a_star_search(self, start, goal):
         board = self.game.field
-        bugs = self.game.field.get_bugs()
-        other_pos = self.other_player_position()
-        has_weapon = self.game.my_player().has_weapon
-        other_has_weapon = self.game.players[self.game.other_botid].has_weapon
-        other_code = self.game.players[self.game.other_botid].snippets
-        code = self.game.my_player().snippets
 
         frontier = PriorityQueue()
         frontier.put(start, 0)
@@ -144,6 +154,8 @@ class Bot:
         cost_so_far = {}
         came_from[start] = None
         cost_so_far[start] = 0
+
+        plus = 0
 
         while not frontier.empty():
             current = frontier.get()
@@ -155,39 +167,14 @@ class Bot:
 
             for next_move in moves:
                 next = tuple(map(operator.add, next_move[0], current))
-
-                if len(bugs) != 0:
-                    for bug in bugs:
-                        if next == bug:
-                            if has_weapon:
-                                new_cost = cost_so_far[current] + 2
-                            else:
-                                new_cost = cost_so_far[current] + 10
-                            break
-                        else:
-                            new_cost = cost_so_far[current] + 1
-                else:
-                    new_cost = cost_so_far[current] + 1
-
-                if next == other_pos:
-                    if has_weapon:
-                        if other_code > code:
-                            new_cost = cost_so_far[current] - 8
-                        else:
-                            new_cost = cost_so_far[current] - 1
-                    elif other_has_weapon:
-                        new_cost = cost_so_far[current] + 10
-                    else:
-                        new_cost = cost_so_far[current] + 2
-
-
+                new_cost = cost_so_far[current] + 1
                 if next not in cost_so_far or new_cost < cost_so_far[next]:
                     cost_so_far[next] = new_cost
                     priority = new_cost + heuristic(next, goal)
                     frontier.put(next, priority)
                     came_from[next] = current
 
-        return came_from, cost_so_far[goal]
+        return came_from, cost_so_far[goal]+plus
 
 
 def heuristic(a, b):

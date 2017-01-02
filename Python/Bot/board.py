@@ -122,7 +122,7 @@ class Board:
         row_count = self.height
         col_count = self.width
 
-        m = 3
+        m = 2
         x = row_count % m
         y = col_count % m
 
@@ -134,8 +134,8 @@ class Board:
         found = False
         zones = {}
         zone = 1
-        for a in range(3):
-            for b in range(3):
+        for a in range(m):
+            for b in range(m):
                 count = 0
                 r_start = int(a*(row_count/m+1))
                 r_end = int((a+1)*(row_count/m+1)-1)
