@@ -1,9 +1,10 @@
 import copy
 import sys
 
+
 PLAYER1, PLAYER2, EMPTY, BLOCKED, BUG, WEAPON, CODE = [0, 1, 2, 3, 4, 5, 6]
 
-S_PLAYER1, S_PLAYER2, S_EMPTY, S_BLOCKED, S_BUG, S_WEAPON, S_CODE = ['0', '1', '.', 'x', 'E', 'W', 'C']
+S_PLAYER1, S_PLAYER2, S_EMPTY, S_BLOCKED, S_BUG, S_WEAPON, S_CODE = ['0', '1', '.', 'x', 'e', 'w', 'c']
 
 CHARTABLE = [(PLAYER1, S_PLAYER1), (PLAYER2, S_PLAYER2), (EMPTY, S_EMPTY), (BLOCKED, S_BLOCKED), (BUG, S_BUG), (WEAPON, S_WEAPON), (CODE, S_CODE)]
 
@@ -56,22 +57,19 @@ class Board:
             col += 1
 
     def in_bounds (self, row, col):
-        return row > 0 and col > 0 and col < self.width and row < self.height
+        return row >= 0 and col >= 0 and col < self.width and row < self.height
 
-    def legal_moves(self, my_id, players):
-        my_player = players[my_id]
-        #sys.stderr.write("my player loc = " + str(my_player.row) + ", " + str(my_player.col) + "\n")
+    def legal_moves(self, current):
+
+        (row, col) = current
         result = []
         for ((o_row, o_col), order) in DIRS:
-            t_row = my_player.row + o_row
-            t_col = my_player.col + o_col
-            #sys.stderr.write("Testing " + str(t_row) + ", " + str(t_col) + "\n")
+            t_row = row + o_row
+            t_col = col + o_col
             if (self.in_bounds(t_row, t_col)) and (not BLOCKED in self.cell[t_row][t_col]):
-                #sys.stderr.write("legal\n")
                 result.append(((o_row, o_col), order))
             else:
                 pass
-                #sys.stderr.write("illegal\n")
         return result
 
     def output_cell(self, cell):
@@ -94,4 +92,73 @@ class Board:
                 self.output_cell(cell)
         sys.stderr.write("\n")
         sys.stderr.flush()
+
+    # Added changes
+
+
+    def get_goals(self):
+
+        goals = []
+        for row in range(self.height):
+            for col in range(self.width):
+                if CODE in self.cell[row][col] or WEAPON in self.cell[row][col]:
+                    cell = self.cell[row][col]
+                    goals.append((row,col))
+
+        return goals
+
+    def get_bugs(self):
+
+        bugs = []
+        for row in range(self.height):
+            for col in range(self.width):
+                if BUG in self.cell[row][col] :
+                    cell = self.cell[row][col]
+                    bugs.append((row,col))
+
+        return bugs
+
+    def attraction_count(self, goal):
+        row_count = self.height
+        col_count = self.width
+
+        m = 3
+        x = row_count % m
+        y = col_count % m
+
+        row_count = row_count - x
+        col_count = col_count - y
+
+        (pos_x,pos_y) = goal
+
+        found = False
+        zones = {}
+        zone = 1
+        for a in range(3):
+            for b in range(3):
+                count = 0
+                r_start = int(a*(row_count/m+1))
+                r_end = int((a+1)*(row_count/m+1)-1)
+                c_start = int(a*(col_count/m+1))
+                c_end = int((a+1)*(col_count/m+1)-1)
+                if r_end > self.height:
+                    r_end = self.height
+                if c_end > self.width:
+                    c_end = self.width
+                for i in range(r_start, r_end):
+                    for j in range(c_start, c_end):
+                        if CODE in self.cell[i][j] or WEAPON in self.cell[i][j]:
+                            count = count + 1
+                            zones[zone] = count
+                        if  pos_x in range(r_start, r_end) and pos_y in range(c_start, c_end):
+                            found = True
+
+                if found:
+                    return (int(zones[zone]))
+
+                zone = zone + 1
+
+        return 0
+
+
 

@@ -109,6 +109,7 @@ class Game():
         sys.stdout.write('%s\n' % (order))
         sys.stdout.flush()
 
+
     def issue_order_pass(self):
         """ pass the turn """
         sys.stdout.write('pass\n')
@@ -118,6 +119,7 @@ class Game():
         'parse input, update game state and call the bot classes do_turn method'
         not_finished = True
         data = ''
+        #file = open("input.txt")
         while(not_finished):
             try:
                 current_line = sys.stdin.readline().rstrip('\r\n')
