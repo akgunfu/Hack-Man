@@ -74,7 +74,7 @@ class Bot:
         goals = self.game.field.get_goals()
         player_position = self.player_position()
         bugs = self.game.field.get_bugs()
-        other_position = self.other_player_position
+        other_position = self.other_player_position()
         has_weapon=self.game.my_player().has_weapon
         other_has_weapon = self.game.players[self.game.other_botid].has_weapon
         other_code = self.game.players[self.game.other_botid].snippets
@@ -84,6 +84,7 @@ class Bot:
             min = 1000
             for goal_t in goals:
                 [trace, cost] = self.a_star_search(player_position, goal_t)
+                [trace_other, cost_other] = self.a_star_search(other_position, goal_t)
                 try:
                     attraction = self.game.field.attraction_count(goal_t)
                     int(math.floor(attraction*1.5))
@@ -115,6 +116,9 @@ class Bot:
 
                     elif other_has_weapon:
                         cost = cost + 8
+
+                    if cost_other < cost:
+                        cost = cost + 50
 
 
                 if cost <= min:
