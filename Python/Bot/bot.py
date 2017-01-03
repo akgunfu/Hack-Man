@@ -50,9 +50,10 @@ class Bot:
         self.game = None
         self.path_stack = Stack()
         self.goal = None
-        self.futile_p = None
+        self.futile_p = (9,10)
         self.trace = []
         self.path = []
+        self.danger = False
 
     def setup(self, game):
         self.game = game
@@ -84,72 +85,127 @@ class Bot:
         other_code = self.game.players[self.game.other_botid].snippets
         code = self.game.my_player().snippets
 
-        m = 3
+        m = 2
         x = self.game.field.width
 
         if len(goals) != 0:
             min = 9999999
             goal_count = len(goals)
             futile_count = 0
+            self.danger = False
             for goal_t in goals:
                 [trace, cost_player] = self.a_star_search(player_position, goal_t)
                 [trash, cost_other] = self.a_star_search(other_position, goal_t)
 
-                cost = 0.75*cost_player + cost_other
+                cost = cost_player + cost_other*1.25
 
                 if cost_player >= cost_other:
-                    cost = cost + 100
-                    futile_count = futile_count + 1
+                    if cost_player == cost_other:
+                        if other_has_weapon or not has_weapon:
+                            cost = cost + 100
+                            futile_count = futile_count + 1
+                    else:
+                        cost = cost + 100
+                        futile_count = futile_count + 1
 
                 is_weapon = self.game.field.is_weapon(goal_t)
                 if is_weapon:
-                    cost = cost + 5
+                    cost = cost + 6
                     if has_weapon:
                         cost = cost + 1000
 
                 attraction = self.game.field.attraction_count(m,goal_t)
                 multiplier = math.floor(attraction * (x - (x / m)))
-                if multiplier > 10:
-                    multiplier = 10
+                if multiplier > 15:
+                    multiplier = 15
                 cost = cost - multiplier
 
                 if cost <= min:
                     min = cost
-                    goal = goal_t
+                    self.goal = goal_t
                     self.trace = trace
 
-
             if futile_count == goal_count or min > 100:
-
-                if self.futile_p is None:
-                    midpoint = (9,10)
-                else:
-                    if self.futile_p == (9, 10):
-                        midpoint = (5,10)
-                    else:
-                        midpoint = (9,10)
-
-                [m_trace, m_cost] = self.a_star_search(player_position,midpoint)
+                [m_trace, m_cost] = self.a_star_search(player_position, self.futile_p)
                 self.trace = m_trace
-                self.futile_p = midpoint
-                goal = midpoint
+                self.goal = self.futile_p
 
-            elif futile_count == 0:
+            elif futile_count == 0 and heuristic(player_position, other_position) < 3:
                 [kill_trace, cost_k] = self.a_star_search(player_position, other_position)
                 if has_weapon and not other_has_weapon:
                     if cost_k <= 3:
-                        goal = other_position
+                        self.goal = other_position
                         self.trace = kill_trace
 
-            self.goal = goal
-            self.path_stack.items = []
+        else:
 
-            traverse = self.goal
-            while traverse != player_position:
-                prev = traverse
-                traverse = self.trace[traverse]
-                move = tuple(map(operator.sub, prev, traverse))
-                self.path_stack.push((move, direction[move]))
+            if player_position != self.futile_p:
+                [m_trace, m_cost] = self.a_star_search(player_position, self.futile_p)
+                self.trace = m_trace
+                self.goal = self.futile_p
+
+            else:
+                [t1, c1] = self.a_star_search(player_position, (9,7))
+                [t2, c2] = self.a_star_search(player_position, (9,12))
+
+                if c1 == c2:
+                    self.goal = self.futile_p
+
+                else:
+                    if c1 > c2:
+                        self.goal = (9,12)
+                        self.trace = t2
+                    else:
+                        self.goal = (9,7)
+                        self.trace = t1
+
+
+        path = []
+        traverse = self.goal
+        while traverse != player_position:
+            path.append(traverse)
+            prev = traverse
+            traverse = self.trace[traverse]
+            move = tuple(map(operator.sub, prev, traverse))
+            self.path_stack.push((move, direction[move]))
+
+        path.append(player_position)
+        path.reverse()
+
+        new_trace = []
+        for p in path:
+            if p != player_position:
+                mo_p = self.game.field.legal_moves(p)
+                for mo in mo_p:
+                    new_p = tuple(map(operator.add, mo[0], p))
+                    if not new_p in path:
+                        new_trace.append(new_p)
+
+        for nt in new_trace:
+            path.append(nt)
+
+        if len(bugs) != 0:
+            for bug in bugs:
+                if bug in path:
+                    [b_t, b_c] = self.a_star_search(player_position, bug)
+                    if b_c <= 2:
+                        self.danger = True
+
+        if other_position in path:
+            if other_has_weapon:
+                [ot_t, ot_c] = self.a_star_search(player_position, other_position)
+                if ot_c <= 2:
+                    self.danger = True
+
+
+        if self.danger:
+            back_move = tuple(map(operator.sub, player_position, path[1]))
+            next_p = tuple(map(operator.add, back_move, player_position))
+            if self.game.field.is_legal(next_p):
+                self.path_stack.push((back_move, direction[back_move]))
+            else:
+                self.path_stack.push(((0, 0), "pass"))
+
 
 
     def player_position(self):

@@ -59,6 +59,10 @@ class Board:
     def in_bounds (self, row, col):
         return row >= 0 and col >= 0 and col < self.width and row < self.height
 
+    def is_legal(self, point):
+        (x, y) = point
+        return self.in_bounds(x,y) and not BLOCKED in self.cell[x][y]
+
     def legal_moves(self, current):
 
         (row, col) = current
