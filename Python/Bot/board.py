@@ -107,6 +107,7 @@ class Board:
 
         return goals
 
+
     def get_bugs(self):
 
         bugs = []
@@ -118,11 +119,17 @@ class Board:
 
         return bugs
 
-    def attraction_count(self, goal):
+
+    def is_weapon(self, x):
+
+        (a, b) = x
+        return WEAPON in self.cell[a][b]
+
+
+    def attraction_count(self, m, goal):
         row_count = self.height
         col_count = self.width
 
-        m = 2
         x = row_count % m
         y = col_count % m
 
@@ -149,15 +156,15 @@ class Board:
                     for j in range(c_start, c_end):
                         if CODE in self.cell[i][j] or WEAPON in self.cell[i][j]:
                             count = count + 1
-                            zones[zone] = count
                         if  pos_x in range(r_start, r_end) and pos_y in range(c_start, c_end):
+                            val = zone
                             found = True
 
-                if found:
-                    return (int(zones[zone]))
-
+                zones[zone] = count
                 zone = zone + 1
 
+        if found:
+            return ((zones[val]))
         return 0
 
 
