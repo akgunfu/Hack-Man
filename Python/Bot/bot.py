@@ -105,7 +105,7 @@ class Bot:
                             cost = cost + 100
                             futile_count = futile_count + 1
                     else:
-                        cost = cost + 100
+                        cost = cost + (40 - cost_other)
                         futile_count = futile_count + 1
 
                 is_weapon = self.game.field.is_weapon(goal_t)
@@ -125,7 +125,7 @@ class Bot:
                     self.goal = goal_t
                     self.trace = trace
 
-            if futile_count == goal_count or min > 100:
+            if futile_count == goal_count and min > 75:
                 [m_trace, m_cost] = self.a_star_search(player_position, self.futile_p)
                 self.trace = m_trace
                 self.goal = self.futile_p
