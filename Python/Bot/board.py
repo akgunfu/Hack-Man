@@ -130,46 +130,5 @@ class Board:
         return WEAPON in self.cell[a][b]
 
 
-    def attraction_count(self, m, goal):
-        row_count = self.height
-        col_count = self.width
-
-        x = row_count % m
-        y = col_count % m
-
-        row_count = row_count - x
-        col_count = col_count - y
-
-        (pos_x,pos_y) = goal
-
-        found = False
-        zones = {}
-        zone = 1
-        for a in range(m):
-            for b in range(m):
-                count = 0
-                r_start = int(a*(row_count/m+1))
-                r_end = int((a+1)*(row_count/m+1)-1)
-                c_start = int(a*(col_count/m+1))
-                c_end = int((a+1)*(col_count/m+1)-1)
-                if r_end > self.height:
-                    r_end = self.height
-                if c_end > self.width:
-                    c_end = self.width
-                for i in range(r_start, r_end):
-                    for j in range(c_start, c_end):
-                        if CODE in self.cell[i][j] or WEAPON in self.cell[i][j]:
-                            count = count + 1
-                        if  pos_x in range(r_start, r_end) and pos_y in range(c_start, c_end):
-                            val = zone
-                            found = True
-
-                zones[zone] = count
-                zone = zone + 1
-
-        if found:
-            return ((zones[val]))
-        return 0
-
 
 

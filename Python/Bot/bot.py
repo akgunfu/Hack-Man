@@ -73,8 +73,6 @@ class Bot:
 
     ## Added changes
 
-    ## TODO Bug evasion
-
     def search(self):
         goals = self.game.field.get_goals()
         player_position = self.player_position()
@@ -85,24 +83,25 @@ class Bot:
         other_code = self.game.players[self.game.other_botid].snippets
         code = self.game.my_player().snippets
 
-        m = 2
-        x = self.game.field.width
-
         if len(goals) != 0:
+
             min = 9999999
             goal_count = len(goals)
             futile_count = 0
             self.danger = False
+
             for goal_t in goals:
+
+                avg_manhattan = self.average(goals,goal_t)
                 [trace, cost_player] = self.a_star_search(player_position, goal_t)
                 [trash, cost_other] = self.a_star_search(other_position, goal_t)
 
-                cost = cost_player + cost_other*1.25
+                cost = cost_player + cost_other + avg_manhattan
 
                 if cost_player >= cost_other:
                     if cost_player == cost_other:
                         if other_has_weapon or not has_weapon:
-                            cost = cost + 100
+                            cost = cost + (40 - cost_other)
                             futile_count = futile_count + 1
                     else:
                         cost = cost + (40 - cost_other)
@@ -110,32 +109,19 @@ class Bot:
 
                 is_weapon = self.game.field.is_weapon(goal_t)
                 if is_weapon:
-                    cost = cost + 6
+                    cost = cost + 5
                     if has_weapon:
                         cost = cost + 1000
-
-                attraction = self.game.field.attraction_count(m,goal_t)
-                multiplier = math.floor(attraction * (x - (x / m)))
-                if multiplier > 15:
-                    multiplier = 15
-                cost = cost - multiplier
 
                 if cost <= min:
                     min = cost
                     self.goal = goal_t
                     self.trace = trace
 
-            if futile_count == goal_count and min > 75:
+            if futile_count == goal_count and min > 60:
                 [m_trace, m_cost] = self.a_star_search(player_position, self.futile_p)
                 self.trace = m_trace
                 self.goal = self.futile_p
-
-            elif futile_count == 0 and heuristic(player_position, other_position) < 3:
-                [kill_trace, cost_k] = self.a_star_search(player_position, other_position)
-                if has_weapon and not other_has_weapon:
-                    if cost_k <= 3:
-                        self.goal = other_position
-                        self.trace = kill_trace
 
         else:
 
@@ -145,7 +131,7 @@ class Bot:
                 self.goal = self.futile_p
 
             else:
-                [t1, c1] = self.a_star_search(player_position, (9,7))
+                [t1, c1] = self.a_star_search(player_position, (9,8))
                 [t2, c2] = self.a_star_search(player_position, (9,12))
 
                 if c1 == c2:
@@ -156,7 +142,7 @@ class Bot:
                         self.goal = (9,12)
                         self.trace = t2
                     else:
-                        self.goal = (9,7)
+                        self.goal = (9,8)
                         self.trace = t1
 
 
@@ -197,7 +183,6 @@ class Bot:
                 if ot_c <= 2:
                     self.danger = True
 
-
         if self.danger:
             back_move = tuple(map(operator.sub, player_position, path[1]))
             next_p = tuple(map(operator.add, back_move, player_position))
@@ -207,6 +192,19 @@ class Bot:
                 self.path_stack.push(((0, 0), "pass"))
 
 
+
+    def average(self, goals, goal_t):
+        total = 0
+        if goals != 0:
+            for goal in goals:
+                if goal != goal_t:
+                    [trash, cost] = self.a_star_search(goal, goal_t)
+                    total = total + cost
+
+            return total/len(goals)
+
+        else:
+            return 0
 
     def player_position(self):
         pos_x = self.game.my_player().row
